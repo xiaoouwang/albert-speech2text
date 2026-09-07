@@ -1,0 +1,7 @@
+name = "albert-speech2text"
+main = "worker/index.js"
+compatibility_date = "2026-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALBERT_BASE_URL = "https://albert.api.etalab.gouv.fr/v1"
