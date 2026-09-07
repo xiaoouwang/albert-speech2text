@@ -1,6 +1,8 @@
 /**
  * Cloudflare Worker — Albert audio transcription proxy (GitHub Pages CORS).
- * API key must come from the client (X-Albert-Api-Key / Authorization).
+ *
+ * Optional secret ALBERT_API_KEY is used when the client does not send a key.
+ * Health never advertises whether a server key is configured.
  * Vars: ALBERT_BASE_URL
  */
 
@@ -47,16 +49,16 @@ export default {
   },
 };
 
-function resolveApiKey(request) {
+function resolveApiKey(request, env) {
   const header = request.headers.get("X-Albert-Api-Key");
   if (header?.trim()) return header.trim();
   const auth = request.headers.get("Authorization");
   if (auth?.startsWith("Bearer ")) return auth.slice(7).trim();
-  return "";
+  return env.ALBERT_API_KEY || "";
 }
 
 async function handleModels(request, env) {
-  const apiKey = resolveApiKey(request);
+  const apiKey = resolveApiKey(request, env);
   if (!apiKey) {
     return json(
       {
@@ -103,7 +105,7 @@ async function handleModels(request, env) {
 }
 
 async function handleTranscribe(request, env) {
-  const apiKey = resolveApiKey(request);
+  const apiKey = resolveApiKey(request, env);
   if (!apiKey) {
     return json(
       {

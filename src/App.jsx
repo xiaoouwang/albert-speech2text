@@ -315,13 +315,6 @@ export default function App() {
   }
 
   async function transcribeJob(job, { silent = false } = {}) {
-    if (!apiKey.trim()) {
-      const message = "Indiquez votre clé Albert API pour continuer.";
-      if (!silent) throw new Error(message);
-      patchJob(job.id, { status: "error", error: message, lastMessage: message });
-      return { ok: false, error: message };
-    }
-
     try {
       const ready = await ensureJobReady(job);
       if (!ready?.file) {
@@ -460,10 +453,6 @@ export default function App() {
   async function transcribeAll() {
     if (!jobs.length) {
       setError("Ajoutez d’abord un dossier ou plusieurs fichiers.");
-      return;
-    }
-    if (!apiKey.trim()) {
-      setError("Indiquez votre clé Albert API pour continuer.");
       return;
     }
 
