@@ -44,7 +44,6 @@ export default function App() {
   const [apiKey, setApiKey] = useState(
     () => localStorage.getItem(API_KEY_STORAGE) || "",
   );
-  const [hasServerKey, setHasServerKey] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [activeJobId, setActiveJobId] = useState(null);
   const [model, setModel] = useState(DEFAULT_MODEL);
@@ -87,13 +86,6 @@ export default function App() {
   useEffect(() => {
     activeJobIdRef.current = activeJobId;
   }, [activeJobId]);
-
-  useEffect(() => {
-    fetch(apiUrl("/api/health"))
-      .then((r) => r.json())
-      .then((data) => setHasServerKey(Boolean(data.hasServerKey)))
-      .catch(() => setHasServerKey(false));
-  }, []);
 
   useEffect(() => {
     localStorage.setItem(API_KEY_STORAGE, apiKey);
@@ -323,7 +315,7 @@ export default function App() {
   }
 
   async function transcribeJob(job, { silent = false } = {}) {
-    if (!apiKey.trim() && !hasServerKey) {
+    if (!apiKey.trim()) {
       const message = "Indiquez votre clé Albert API pour continuer.";
       if (!silent) throw new Error(message);
       patchJob(job.id, { status: "error", error: message, lastMessage: message });
@@ -470,7 +462,7 @@ export default function App() {
       setError("Ajoutez d’abord un dossier ou plusieurs fichiers.");
       return;
     }
-    if (!apiKey.trim() && !hasServerKey) {
+    if (!apiKey.trim()) {
       setError("Indiquez votre clé Albert API pour continuer.");
       return;
     }
@@ -785,11 +777,7 @@ export default function App() {
               id="api-key"
               type="password"
               autoComplete="off"
-              placeholder={
-                hasServerKey
-                  ? "Optionnel — clé serveur déjà configurée"
-                  : "ALBERT_API_KEY"
-              }
+              placeholder=""
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />

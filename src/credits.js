@@ -21,12 +21,12 @@ const APP_CREDITS = {
   /** Displayed left → right, each in its own white card (as in the credit mockup). */
   logos: [
     {
-      src: "/logos/logo_mshs.png?v=2",
+      src: `${import.meta.env.BASE_URL}logos/logo_mshs.png?v=2`,
       alt: "Université Côte d'Azur, CNRS, Università di Corsica, MSHS Sud-Est",
       href: "https://mshs.univ-cotedazur.fr/",
     },
     {
-      src: "/logos/logo_humanum.png?v=2",
+      src: `${import.meta.env.BASE_URL}logos/logo_humanum.png?v=2`,
       alt: "Huma-Num IR*",
       href: "https://www.huma-num.fr/",
     },

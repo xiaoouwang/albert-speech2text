@@ -1,8 +1,7 @@
 /**
  * Cloudflare Worker — Albert audio transcription proxy (GitHub Pages CORS).
- *
- * Secrets: ALBERT_API_KEY (optional; users can also send X-Albert-Api-Key)
- * Vars:    ALBERT_BASE_URL
+ * API key must come from the client (X-Albert-Api-Key / Authorization).
+ * Vars: ALBERT_BASE_URL
  */
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -28,7 +27,7 @@ export default {
       if (path === "/api/health" && request.method === "GET") {
         return json({
           ok: true,
-          hasServerKey: Boolean(env.ALBERT_API_KEY),
+          hasServerKey: false,
           baseUrl: env.ALBERT_BASE_URL,
         });
       }
@@ -48,21 +47,20 @@ export default {
   },
 };
 
-function resolveApiKey(request, env) {
+function resolveApiKey(request) {
   const header = request.headers.get("X-Albert-Api-Key");
   if (header?.trim()) return header.trim();
   const auth = request.headers.get("Authorization");
   if (auth?.startsWith("Bearer ")) return auth.slice(7).trim();
-  return env.ALBERT_API_KEY || "";
+  return "";
 }
 
 async function handleModels(request, env) {
-  const apiKey = resolveApiKey(request, env);
+  const apiKey = resolveApiKey(request);
   if (!apiKey) {
     return json(
       {
-        error:
-          "Missing API key. Set ALBERT_API_KEY on the Worker or provide it in the UI.",
+        error: "Missing API key. Provide it in the UI.",
       },
       401,
     );
@@ -105,12 +103,11 @@ async function handleModels(request, env) {
 }
 
 async function handleTranscribe(request, env) {
-  const apiKey = resolveApiKey(request, env);
+  const apiKey = resolveApiKey(request);
   if (!apiKey) {
     return json(
       {
-        error:
-          "Missing API key. Set ALBERT_API_KEY on the Worker or provide it in the UI.",
+        error: "Missing API key. Provide it in the UI.",
       },
       401,
     );
