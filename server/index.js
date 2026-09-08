@@ -179,5 +179,5 @@ if (isProd) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Albert Whisper server listening on http://localhost:${PORT}`);
+  console.log(`Albert Speech-to-text server listening on http://localhost:${PORT}`);
 });

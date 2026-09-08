@@ -1,4 +1,4 @@
-# Albert Whisper
+# Albert Speech-to-text
 
 Interface web pour [Albert API — Transcription audio](https://guides.ia.numerique.gouv.fr/albert-api/guides/audio-transcription).
 

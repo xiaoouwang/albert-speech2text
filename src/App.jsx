@@ -697,11 +697,11 @@ export default function App() {
 
       <header className="top">
         <div className="brand">
-          <h1 className="brand__mark">{APP_CREDITS.appName}</h1>
-          <p className="brand__tagline">
-            <strong>Parole → texte</strong>
-            {" · transcription audio MP3/WAV, sous-titres SRT/VTT, édition alignée"}
-          </p>
+          <h1 className="brand__mark">
+            <span className="brand__mark-name">Albert</span>
+            <span className="brand__mark-product">Speech-to-text</span>
+          </h1>
+          <p className="brand__tagline">{APP_CREDITS.tagline}</p>
 
           <div className="brand__credits">
             <div className="brand__credit-row">
