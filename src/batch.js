@@ -12,6 +12,32 @@ function isAudioFile(file) {
   );
 }
 
+function isVideoFile(file) {
+  if (!file?.name) return false;
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".mp4") ||
+    name.endsWith(".webm") ||
+    name.endsWith(".mov") ||
+    name.endsWith(".mkv") ||
+    name.endsWith(".m4v") ||
+    (typeof file.type === "string" && file.type.startsWith("video/"))
+  );
+}
+
+function isImportMediaFile(file) {
+  if (!file?.name) return false;
+  if (isAudioFile(file) || isVideoFile(file)) return true;
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".m4a") ||
+    name.endsWith(".ogg") ||
+    name.endsWith(".aac") ||
+    name.endsWith(".flac") ||
+    (typeof file.type === "string" && file.type.startsWith("audio/"))
+  );
+}
+
 function jobLabel(file) {
   return file.webkitRelativePath || file.name;
 }
@@ -24,6 +50,7 @@ function createJob(file, index = 0) {
     sourceFile: file,
     file: null,
     previewUrl: "",
+    mediaKind: "audio",
     compressionInfo: null,
     result: null,
     segments: [],
@@ -42,6 +69,7 @@ function createSrtJob(file, segments, rawText, index = 0) {
     sourceFile: null,
     file: null,
     previewUrl: "",
+    mediaKind: null,
     compressionInfo: null,
     result: { text: rawText, format: "srt" },
     segments,
@@ -49,6 +77,47 @@ function createSrtJob(file, segments, rawText, index = 0) {
     error: null,
     lastMessage: `SRT importé — ${segments.length} segment(s)`,
     sourceKind: "srt",
+  };
+}
+
+function createImportJob({
+  title,
+  srtFile,
+  mediaFile,
+  segments,
+  rawText,
+  index = 0,
+}) {
+  const mediaKind = mediaFile
+    ? isVideoFile(mediaFile)
+      ? "video"
+      : "audio"
+    : null;
+  const previewUrl = mediaFile ? URL.createObjectURL(mediaFile) : "";
+  const canTranscribeAudio =
+    Boolean(mediaFile) && mediaKind === "audio" && isAudioFile(mediaFile);
+  const label =
+    (title && title.trim()) ||
+    srtFile.name.replace(/\.srt$/i, "") ||
+    "Projet importé";
+
+  return {
+    id: `${Date.now()}-import-${index}-${Math.random().toString(36).slice(2, 8)}`,
+    label,
+    originalName: srtFile.name,
+    sourceFile: canTranscribeAudio ? mediaFile : null,
+    file: canTranscribeAudio ? mediaFile : null,
+    previewUrl,
+    mediaKind,
+    compressionInfo: null,
+    result: { text: rawText, format: "srt" },
+    segments,
+    status: "done",
+    error: null,
+    lastMessage: mediaFile
+      ? `Import — ${segments.length} segment(s) + média`
+      : `Import — ${segments.length} segment(s)`,
+    sourceKind: "import",
   };
 }
 
@@ -111,10 +180,13 @@ function sleep(ms) {
 
 export {
   isAudioFile,
+  isVideoFile,
+  isImportMediaFile,
   isSrtFile,
   jobLabel,
   createJob,
   createSrtJob,
+  createImportJob,
   collectAudioFiles,
   collectSrtFiles,
   statusLabel,

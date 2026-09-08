@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import TranscriptEditor from "./TranscriptEditor";
+import ImportProjectModal from "./ImportProjectModal";
 import {
   collectAudioFiles,
-  collectSrtFiles,
   createJob,
-  createSrtJob,
+  createImportJob,
   sleep,
   statusLabel,
   statusMark,
@@ -65,10 +65,10 @@ export default function App() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
-  const srtInputRef = useRef(null);
   const audioRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -318,89 +318,38 @@ export default function App() {
     }
   }
 
-  async function ingestSrtFiles(fileList, { replace = false } = {}) {
-    const srtFiles = collectSrtFiles(fileList);
-    if (!srtFiles.length) {
-      setError("Aucun fichier SRT trouvé.");
-      return;
+  async function importExistingProject({ title, srtFile, mediaFile }) {
+    const text = await srtFile.text();
+    const segments = parseSrt(text);
+    if (!segments.length) {
+      throw new Error("SRT vide ou illisible.");
     }
 
     setError("");
-    const created = [];
-
-    for (let i = 0; i < srtFiles.length; i += 1) {
-      const file = srtFiles[i];
-      try {
-        const text = await file.text();
-        const segments = parseSrt(text);
-        if (!segments.length) {
-          appendBatchLog({
-            level: "error",
-            label: file.name,
-            message: "SRT vide ou illisible",
-          });
-          continue;
-        }
-        created.push(createSrtJob(file, segments, text, i));
-        appendBatchLog({
-          level: "ok",
-          label: file.name,
-          message: `SRT importé — ${segments.length} segment(s)`,
-        });
-      } catch (err) {
-        appendBatchLog({
-          level: "error",
-          label: file.name,
-          message: err.message || "Échec lecture SRT",
-        });
-      }
-    }
-
-    if (!created.length) {
-      setError("Impossible d’importer ces SRT.");
-      return;
-    }
-
     setFormat("srt");
-
-    const active = jobsRef.current.find((j) => j.id === activeJobIdRef.current);
-    if (
-      created.length === 1 &&
-      active &&
-      (active.sourceFile || active.file) &&
-      !(active.segments && active.segments.length)
-    ) {
-      const imported = created[0];
-      patchJob(active.id, {
-        segments: imported.segments,
-        result: imported.result,
-        status: "done",
-        error: null,
-        lastMessage: imported.lastMessage,
-      });
-      appendBatchLog({
-        level: "info",
-        label: active.label,
-        message: `Segments SRT appliqués depuis ${imported.originalName}`,
-      });
-      return;
-    }
-
-    if (replace) {
-      jobsRef.current.forEach((job) => {
-        if (job.previewUrl) URL.revokeObjectURL(job.previewUrl);
-      });
-      setJobs(created);
-    } else {
-      setJobs((prev) => [...prev, ...created]);
-    }
-    setActiveJobId(created[0].id);
+    const job = createImportJob({
+      title,
+      srtFile,
+      mediaFile,
+      segments,
+      rawText: text,
+    });
+    setJobs((prev) => [...prev, job]);
+    setActiveJobId(job.id);
+    appendBatchLog({
+      level: "ok",
+      label: job.label,
+      message: job.lastMessage,
+    });
   }
 
   async function transcribeJob(job, { silent = false } = {}) {
-    if (job.sourceKind === "srt" || (!job.sourceFile && !job.file)) {
+    if (
+      job.sourceKind === "srt" ||
+      (job.sourceKind === "import" && !job.sourceFile && !job.file)
+    ) {
       const message =
-        "Ce fichier est un SRT importé — pas de transcription API nécessaire.";
+        "Ce projet est importé sans audio API — éditez les segments directement.";
       if (!silent) setError(message);
       return { ok: false, error: message };
     }
@@ -891,13 +840,23 @@ export default function App() {
         <aside className="sidebar" aria-label="Audio et paramètres">
           <div className="player-dock">
             {activeJob?.previewUrl ? (
-              <audio
-                ref={audioRef}
-                className="preview"
-                controls
-                src={activeJob.previewUrl}
-                key={activeJob.id}
-              />
+              activeJob.mediaKind === "video" ? (
+                <video
+                  ref={audioRef}
+                  className="preview preview--video"
+                  controls
+                  src={activeJob.previewUrl}
+                  key={activeJob.id}
+                />
+              ) : (
+                <audio
+                  ref={audioRef}
+                  className="preview"
+                  controls
+                  src={activeJob.previewUrl}
+                  key={activeJob.id}
+                />
+              )
             ) : (
               <p className="player-dock__empty">
                 Console audio — chargez un fichier pour écouter et aligner
@@ -1061,29 +1020,6 @@ export default function App() {
             >
               Dossier
             </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                srtInputRef.current?.click();
-              }}
-              disabled={busy}
-            >
-              Importer SRT
-            </button>
-            <input
-              ref={srtInputRef}
-              type="file"
-              accept=".srt,application/x-subrip,text/plain"
-              multiple
-              hidden
-              onChange={(e) => {
-                const files = e.target.files;
-                if (files?.length) void ingestSrtFiles(files, { replace: false });
-                e.target.value = "";
-              }}
-            />
             {!recording ? (
               <button
                 type="button"
@@ -1125,6 +1061,18 @@ export default function App() {
               </button>
             ) : null}
           </div>
+
+          <button
+            type="button"
+            className="import-cta"
+            onClick={() => setImportOpen(true)}
+            disabled={busy}
+          >
+            <span className="import-cta__question">
+              Vous avez déjà un audio ou une vidéo et un sous-titre / transcript ?
+            </span>
+            <span className="import-cta__action">Cliquez ici pour les importer</span>
+          </button>
 
           <div className="controls">
             <div className="field-row">
@@ -1366,7 +1314,7 @@ export default function App() {
             ) : null}
           </div>
 
-          {activeJob?.result ? (
+          {activeJob?.segments?.length || activeJob?.result ? (
             <TranscriptEditor
               key={activeJob.id}
               segments={activeJob.segments}
@@ -1378,11 +1326,17 @@ export default function App() {
             <p className="result__empty">
               {jobs.length > 1
                 ? "Choisissez un fichier dans la liste, transcrivez-le (ou lancez le lot), puis corrigez segment par segment."
-                : "Importez un fichier ou un dossier, transcrivez, puis éditez texte, horodatages et locuteurs."}
+                : "Importez de l’audio à transcrire, ou un projet existant (SRT ± média) via le lien ci-contre."}
             </p>
           )}
         </section>
       </main>
+
+      <ImportProjectModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={importExistingProject}
+      />
 
       <footer className="foot">
         <p className="foot__note">
