@@ -686,17 +686,27 @@ export default function App() {
 
   return (
     <div className="page">
-      <div className="atmosphere" aria-hidden="true" />
+      <div className="atmosphere" aria-hidden="true">
+        <div className="atmosphere__wave" />
+        <div className="atmosphere__eq">
+          {Array.from({ length: 10 }, (_, i) => (
+            <span key={i} style={{ "--i": i }} />
+          ))}
+        </div>
+      </div>
 
       <header className="top">
         <div className="brand">
-          <p className="brand__mark">{APP_CREDITS.appName}</p>
+          <h1 className="brand__mark">{APP_CREDITS.appName}</h1>
+          <p className="brand__tagline">
+            <strong>Parole → texte</strong>
+            {" · transcription audio MP3/WAV, sous-titres SRT/VTT, édition alignée"}
+          </p>
 
           <div className="brand__credits">
             <div className="brand__credit-row">
               <p className="brand__credit-line">
                 {APP_CREDITS.creditPrefix}{" "}
-                <span aria-hidden="true">👨‍💻</span>{" "}
                 <a
                   className="brand__credit-link"
                   href={APP_CREDITS.contributor.href}
@@ -789,7 +799,9 @@ export default function App() {
                 key={activeJob.id}
               />
             ) : (
-              <p className="player-dock__empty">Lecteur audio — chargez un fichier ou un dossier</p>
+              <p className="player-dock__empty">
+                Console audio — chargez un fichier pour écouter et aligner
+              </p>
             )}
           </div>
 
@@ -910,8 +922,8 @@ export default function App() {
               </div>
             ) : (
               <div className="dropzone__hint">
-                <strong>Déposer fichiers / dossier</strong>
-                <span>MP3 ou WAV · compression auto &gt; 20 Mo</span>
+                <strong>Importer de l’audio à transcrire</strong>
+                <span>MP3 / WAV · glisser-déposer · lot & dossier · &gt; 20 Mo compressé</span>
               </div>
             )}
           </div>
@@ -959,7 +971,11 @@ export default function App() {
                 Micro
               </button>
             ) : (
-              <button type="button" className="btn btn--danger btn--sm" onClick={stopRecording}>
+              <button
+                type="button"
+                className="btn btn--danger btn--sm is-recording"
+                onClick={stopRecording}
+              >
                 Stop · {formatTime(recordSeconds)}
               </button>
             )}

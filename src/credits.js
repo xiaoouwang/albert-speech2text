@@ -1,6 +1,7 @@
 /** Edit this file to update the credits shown in the UI. */
 const APP_CREDITS = {
   appName: "Albert Whisper",
+  tagline: "Parole → texte · Whisper via Albert API",
   creditPrefix: "Interface",
   contributor: {
     name: "Xiaoou Wang",
