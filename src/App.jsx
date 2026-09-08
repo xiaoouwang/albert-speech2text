@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import TranscriptEditor from "./TranscriptEditor";
 import {
   collectAudioFiles,
+  collectSrtFiles,
   createJob,
+  createSrtJob,
   sleep,
   statusLabel,
   statusMark,
@@ -24,6 +26,7 @@ import {
 import {
   editedResultPayload,
   normalizeSegments,
+  parseSrt,
 } from "./transcript";
 import { APP_CREDITS } from "./credits";
 import { apiUrl } from "./apiBase";
@@ -65,6 +68,7 @@ export default function App() {
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
+  const srtInputRef = useRef(null);
   const audioRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -314,7 +318,92 @@ export default function App() {
     }
   }
 
+  async function ingestSrtFiles(fileList, { replace = false } = {}) {
+    const srtFiles = collectSrtFiles(fileList);
+    if (!srtFiles.length) {
+      setError("Aucun fichier SRT trouvé.");
+      return;
+    }
+
+    setError("");
+    const created = [];
+
+    for (let i = 0; i < srtFiles.length; i += 1) {
+      const file = srtFiles[i];
+      try {
+        const text = await file.text();
+        const segments = parseSrt(text);
+        if (!segments.length) {
+          appendBatchLog({
+            level: "error",
+            label: file.name,
+            message: "SRT vide ou illisible",
+          });
+          continue;
+        }
+        created.push(createSrtJob(file, segments, text, i));
+        appendBatchLog({
+          level: "ok",
+          label: file.name,
+          message: `SRT importé — ${segments.length} segment(s)`,
+        });
+      } catch (err) {
+        appendBatchLog({
+          level: "error",
+          label: file.name,
+          message: err.message || "Échec lecture SRT",
+        });
+      }
+    }
+
+    if (!created.length) {
+      setError("Impossible d’importer ces SRT.");
+      return;
+    }
+
+    setFormat("srt");
+
+    const active = jobsRef.current.find((j) => j.id === activeJobIdRef.current);
+    if (
+      created.length === 1 &&
+      active &&
+      (active.sourceFile || active.file) &&
+      !(active.segments && active.segments.length)
+    ) {
+      const imported = created[0];
+      patchJob(active.id, {
+        segments: imported.segments,
+        result: imported.result,
+        status: "done",
+        error: null,
+        lastMessage: imported.lastMessage,
+      });
+      appendBatchLog({
+        level: "info",
+        label: active.label,
+        message: `Segments SRT appliqués depuis ${imported.originalName}`,
+      });
+      return;
+    }
+
+    if (replace) {
+      jobsRef.current.forEach((job) => {
+        if (job.previewUrl) URL.revokeObjectURL(job.previewUrl);
+      });
+      setJobs(created);
+    } else {
+      setJobs((prev) => [...prev, ...created]);
+    }
+    setActiveJobId(created[0].id);
+  }
+
   async function transcribeJob(job, { silent = false } = {}) {
+    if (job.sourceKind === "srt" || (!job.sourceFile && !job.file)) {
+      const message =
+        "Ce fichier est un SRT importé — pas de transcription API nécessaire.";
+      if (!silent) setError(message);
+      return { ok: false, error: message };
+    }
     try {
       const ready = await ensureJobReady(job);
       if (!ready?.file) {
@@ -451,13 +540,16 @@ export default function App() {
   }
 
   async function transcribeAll() {
-    if (!jobs.length) {
-      setError("Ajoutez d’abord un dossier ou plusieurs fichiers.");
+    const audioJobs = jobsRef.current.filter(
+      (j) => j.sourceKind !== "srt" && (j.sourceFile || j.file),
+    );
+    if (!audioJobs.length) {
+      setError("Ajoutez d’abord des fichiers audio (MP3/WAV) à transcrire.");
       return;
     }
 
     const token = ++prepareTokenRef.current;
-    const snapshot = [...jobsRef.current];
+    const snapshot = [...audioJobs];
     setBusy(true);
     setError("");
     appendBatchLog({
@@ -674,6 +766,14 @@ export default function App() {
   const selectedFormatMeta = RESPONSE_FORMATS.find((f) => f.value === format);
   const activeIndex = jobs.findIndex((j) => j.id === activeJobId);
   const doneCount = jobs.filter((j) => j.status === "done").length;
+  const canTranscribeActive = Boolean(
+    activeJob &&
+      activeJob.sourceKind !== "srt" &&
+      (activeJob.sourceFile || activeJob.file),
+  );
+  const audioJobCount = jobs.filter(
+    (j) => j.sourceKind !== "srt" && (j.sourceFile || j.file),
+  ).length;
   const exportableCount = jobs.filter(
     (j) => j.result || (j.segments && j.segments.length),
   ).length;
@@ -961,6 +1061,29 @@ export default function App() {
             >
               Dossier
             </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                srtInputRef.current?.click();
+              }}
+              disabled={busy}
+            >
+              Importer SRT
+            </button>
+            <input
+              ref={srtInputRef}
+              type="file"
+              accept=".srt,application/x-subrip,text/plain"
+              multiple
+              hidden
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files?.length) void ingestSrtFiles(files, { replace: false });
+                e.target.value = "";
+              }}
+            />
             {!recording ? (
               <button
                 type="button"
@@ -1081,17 +1204,17 @@ export default function App() {
             <button
               type="button"
               className="btn btn--primary"
-              disabled={busy || !activeJob}
+              disabled={busy || !canTranscribeActive}
               onClick={transcribeCurrent}
             >
               {loading && !batchProgress
                 ? "Transcription…"
-                : jobs.length > 1
+                : audioJobCount > 1
                   ? "Transcrire ce fichier"
                   : "Transcrire"}
             </button>
 
-            {jobs.length > 1 ? (
+            {audioJobCount > 1 ? (
               <button
                 type="button"
                 className="btn btn--secondary"
@@ -1100,7 +1223,7 @@ export default function App() {
               >
                 {batchProgress?.phase === "transcribe"
                   ? `Lot ${batchProgress.index}/${batchProgress.total}…`
-                  : `Transcrire tout (${jobs.length})`}
+                  : `Transcrire tout (${audioJobCount})`}
               </button>
             ) : null}
 

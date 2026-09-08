@@ -30,7 +30,38 @@ function createJob(file, index = 0) {
     status: "pending",
     error: null,
     lastMessage: null,
+    sourceKind: "audio",
   };
+}
+
+function createSrtJob(file, segments, rawText, index = 0) {
+  return {
+    id: `${Date.now()}-srt-${index}-${Math.random().toString(36).slice(2, 8)}`,
+    label: file.name,
+    originalName: file.name,
+    sourceFile: null,
+    file: null,
+    previewUrl: "",
+    compressionInfo: null,
+    result: { text: rawText, format: "srt" },
+    segments,
+    status: "done",
+    error: null,
+    lastMessage: `SRT importé — ${segments.length} segment(s)`,
+    sourceKind: "srt",
+  };
+}
+
+function isSrtFile(file) {
+  if (!file?.name) return false;
+  const name = file.name.toLowerCase();
+  return name.endsWith(".srt") || file.type === "application/x-subrip";
+}
+
+function collectSrtFiles(fileList) {
+  const files = Array.from(fileList || []).filter(isSrtFile);
+  files.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  return files;
 }
 
 function collectAudioFiles(fileList) {
@@ -80,9 +111,12 @@ function sleep(ms) {
 
 export {
   isAudioFile,
+  isSrtFile,
   jobLabel,
   createJob,
+  createSrtJob,
   collectAudioFiles,
+  collectSrtFiles,
   statusLabel,
   statusMark,
   sleep,

@@ -192,6 +192,7 @@ function editedResultPayload(result, segments, exportFormat) {
 
 export {
   normalizeSegments,
+  parseSrt,
   segmentsHaveTiming,
   findActiveSegmentIndex,
   joinSegmentText,

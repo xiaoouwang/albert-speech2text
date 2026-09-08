@@ -321,8 +321,8 @@ export default function TranscriptEditor({
     return (
       <div className="review">
         <p className="result__empty">
-          Aucun segment. Ajoutez-en un manuellement, ou relancez une
-          transcription avec horodatage.
+          Aucun segment. Importez un SRT, ajoutez-en un manuellement, ou lancez
+          une transcription avec horodatage.
         </p>
         <div className="review__toolbar">
           <button
