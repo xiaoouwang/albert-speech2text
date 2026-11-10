@@ -42,7 +42,7 @@ function jobLabel(file) {
   return file.webkitRelativePath || file.name;
 }
 
-function createJob(file, index = 0) {
+function createJob(file, index = 0, { fromMic = false } = {}) {
   return {
     id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
     label: jobLabel(file),
@@ -58,6 +58,7 @@ function createJob(file, index = 0) {
     error: null,
     lastMessage: null,
     sourceKind: "audio",
+    fromMic: Boolean(fromMic),
   };
 }
 

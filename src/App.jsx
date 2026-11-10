@@ -226,7 +226,7 @@ export default function App() {
     return prepareJob(latest, { token, onProgress });
   }
 
-  async function ingestFiles(fileList, { replace = true } = {}) {
+  async function ingestFiles(fileList, { replace = true, fromMic = false } = {}) {
     const audioFiles = collectAudioFiles(fileList);
     if (!audioFiles.length) {
       setError("Aucun fichier MP3 ou WAV trouvé.");
@@ -245,7 +245,9 @@ export default function App() {
       });
     }
 
-    const created = audioFiles.map((file, index) => createJob(file, index));
+    const created = audioFiles.map((file, index) =>
+      createJob(file, index, { fromMic }),
+    );
     const nextJobs = replace ? created : [...jobs, ...created];
     setJobs(nextJobs);
     setActiveJobId(created[0].id);
@@ -599,7 +601,10 @@ export default function App() {
             blob,
             `enregistrement-${Date.now()}.wav`,
           );
-          await ingestFiles([wavFile], { replace: jobs.length === 0 });
+          await ingestFiles([wavFile], {
+            replace: jobs.length === 0,
+            fromMic: true,
+          });
         } catch (err) {
           setError(err.message || "Échec de la conversion audio.");
         } finally {
@@ -1044,7 +1049,7 @@ export default function App() {
                 className="btn btn--ghost btn--sm"
                 onClick={handleDownloadAudio}
               >
-                Audio
+                {activeJob.fromMic ? "Télécharger l’audio" : "Audio"}
               </button>
             ) : null}
             {jobs.length ? (
