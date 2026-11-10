@@ -1,0 +1,18 @@
+# GitLab Pages — https://mshs-sud-est.gitpages.huma-num.fr/albert-speech2text/
+pages:
+  image: node:22
+  stage: deploy
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  script:
+    - npm ci
+    - npm run build
+    - rm -rf public
+    - mv dist public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
