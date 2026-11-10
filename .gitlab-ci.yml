@@ -1,7 +1,11 @@
-# GitLab Pages — https://mshs-sud-est.gitpages.huma-num.fr/albert-speech2text/
+# GitLab Pages unique domain (root base):
+# https://albert-speech2text-a0896c.gitpages.huma-num.fr/
 pages:
   image: node:22
   stage: deploy
+  variables:
+    VITE_BASE: "/"
+    VITE_SITE_URL: "https://albert-speech2text-a0896c.gitpages.huma-num.fr"
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:

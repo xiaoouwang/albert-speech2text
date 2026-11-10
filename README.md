@@ -20,7 +20,7 @@ Interface web pour [Albert API — Transcription audio](https://guides.ia.numeri
 ## En ligne
 
 - Site (GitHub) : [https://xiaoouwang.github.io/albert-speech2text/](https://xiaoouwang.github.io/albert-speech2text/)
-- Site (Huma-Num GitLab Pages) : [https://mshs-sud-est.gitpages.huma-num.fr/albert-speech2text/](https://mshs-sud-est.gitpages.huma-num.fr/albert-speech2text/)
+- Site (Huma-Num GitLab Pages) : [https://albert-speech2text-a0896c.gitpages.huma-num.fr/](https://albert-speech2text-a0896c.gitpages.huma-num.fr/)
 - Dépôt GitLab : [https://gitlab.huma-num.fr/mshs-sud-est/albert-speech2text](https://gitlab.huma-num.fr/mshs-sud-est/albert-speech2text)
 - API Worker : [https://albert-speech2text.singerxo.workers.dev](https://albert-speech2text.singerxo.workers.dev)
 
@@ -60,8 +60,9 @@ Push sur `main` déclenche le workflow Pages.
 
 ## Déploiement GitLab Pages (Huma-Num)
 
-Le fichier `.gitlab-ci.yml` construit le site et publie l’artefact `public/` sur GitLab Pages.  
-URL attendue : `https://mshs-sud-est.gitpages.huma-num.fr/albert-speech2text/`  
+Le fichier `.gitlab-ci.yml` construit le site avec `VITE_BASE=/` (domaine unique GitLab Pages)  
+et publie l’artefact `public/`.  
+URL : `https://albert-speech2text-a0896c.gitpages.huma-num.fr/`  
 L’API reste le Worker Cloudflare (`VITE_API_BASE`).
 
 ```bash
